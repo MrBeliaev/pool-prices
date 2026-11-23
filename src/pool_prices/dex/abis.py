@@ -1,0 +1,29 @@
+from typing import Any
+
+UNISWAP_V2_PAIR_ABI: list[dict[str, Any]] = [
+    {
+        "name": "getReserves",
+        "type": "function",
+        "stateMutability": "view",
+        "inputs": [],
+        "outputs": [
+            {"name": "_reserve0", "type": "uint112"},
+            {"name": "_reserve1", "type": "uint112"},
+            {"name": "_blockTimestampLast", "type": "uint32"},
+        ],
+    },
+    {
+        "name": "token0",
+        "type": "function",
+        "stateMutability": "view",
+        "inputs": [],
+        "outputs": [{"name": "", "type": "address"}],
+    },
+    {
+        "name": "token1",
+        "type": "function",
+        "stateMutability": "view",
+        "inputs": [],
+        "outputs": [{"name": "", "type": "address"}],
+    },
+]

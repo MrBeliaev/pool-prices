@@ -13,6 +13,8 @@ V3_FACTORY = "0x1F98431c8aD98523631AE4a59f267346ea31F984"
 V3_QUOTER = "0x61fFE014bA17989E743c5F6cB21bF9697530B21e"
 V2_FACTORY = "0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f"
 
+DEFAULT_FEE = 3000
+
 
 @pytest.fixture
 def weth() -> Token:
@@ -73,6 +75,7 @@ def test_dex_v2_has_no_quoter() -> None:
         protocol="uniswap_v2",
         chain_id=1,
         factory_address=V2_FACTORY,
+        fee=3000,
     )
     assert dex.quoter_address is None
 
@@ -91,37 +94,31 @@ def test_dex_rejects_unknown_protocol() -> None:
 # Pool
 
 
-def test_pool_references_dex_by_id_and_fee_is_optional(weth: Token, usdc: Token) -> None:
-    pool = Pool(address=POOL, dex_id=2, tokens=(weth, usdc))
-    assert pool.dex_id == 2
-    assert pool.fee is None
-
-
 def test_pool_requires_positive_dex_id(weth: Token, usdc: Token) -> None:
     with pytest.raises(ValidationError):
-        Pool(address=POOL, dex_id=0, tokens=(weth, usdc))
+        Pool(address=POOL, dex_id=0, tokens=(weth, usdc), fee=DEFAULT_FEE)
 
 
 def test_pool_supports_more_than_two_tokens(weth: Token, usdc: Token, dai: Token) -> None:
-    pool = Pool(address=POOL, dex_id=3, tokens=(weth, usdc, dai))
+    pool = Pool(address=POOL, dex_id=3, tokens=(weth, usdc, dai), fee=DEFAULT_FEE)
     assert len(pool.tokens) == 3
 
 
 def test_pool_requires_at_least_two_tokens(weth: Token) -> None:
     with pytest.raises(ValidationError):
-        Pool(address=POOL, dex_id=1, tokens=(weth))
+        Pool(address=POOL, dex_id=1, tokens=(weth), fee=DEFAULT_FEE)
 
 
 def test_pool_rejects_duplicate_tokens(weth: Token, usdc: Token) -> None:
     with pytest.raises(ValidationError):
-        Pool(address=POOL, dex_id=1, tokens=(weth, weth))
+        Pool(address=POOL, dex_id=1, tokens=(weth, weth), fee=DEFAULT_FEE)
 
     with pytest.raises(ValidationError):
-        Pool(address=POOL, dex_id=1, tokens=(weth, usdc, weth))
+        Pool(address=POOL, dex_id=1, tokens=(weth, usdc, weth), fee=DEFAULT_FEE)
 
 
 def test_pool_supports_pair(weth: Token, usdc: Token, dai: Token) -> None:
-    pool = Pool(address=POOL, dex_id=1, tokens=(weth, usdc))
+    pool = Pool(address=POOL, dex_id=1, tokens=(weth, usdc), fee=DEFAULT_FEE)
     assert pool.suppports_pair(weth, usdc)
     assert pool.suppports_pair(usdc, weth)
     assert not pool.suppports_pair(weth, dai)

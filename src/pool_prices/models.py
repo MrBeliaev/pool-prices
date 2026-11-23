@@ -40,6 +40,17 @@ class Dex(BaseModel):
     protocol: DexProtocol
     factory_address: Address
     quoter_address: Address | None = None
+    fee: int | None = Field(default=None, ge=0, lt=1_000_000)
+
+    @model_validator(mode="after")
+    def fee_matches_protocol(self) -> Self:
+        is_v2 = self.protocol == "uniswap_v2"
+        if is_v2 and self.fee is None:
+            raise ValueError("uniswap v2 dex requires a default fee")
+        if not is_v2 and self.fee is not None:
+            raise ValueError("dex-level fee is only supported for uniswap v2")
+
+        return self
 
 
 class Pool(BaseModel):
@@ -50,7 +61,7 @@ class Pool(BaseModel):
     # Curve, Balancer > 2 tokens
     tokens: tuple[Token, ...] = Field(min_length=2)
     # 0.3% = 3000
-    fee: int | None = Field(default=None, ge=0)
+    fee: int = Field(ge=0, lt=1000000)
 
     @model_validator(mode="after")
     def tokens_must_be_unique(self) -> Self:
