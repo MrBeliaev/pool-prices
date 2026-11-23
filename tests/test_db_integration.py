@@ -39,9 +39,10 @@ async def db() -> AsyncIterator[DB]:
 async def _seed(pool: asyncpg.Pool) -> None:
     await pool.execute(
         """INSERT INTO dexes (id, name, protocol, chain_id, factory_address, quoter_address)
-           VALUES (1, 'Uniswap V2', 'uniswap_v2', 1, '0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f', NULL),
+           VALUES (1, 'Uniswap V2', 'uniswap_v2', 1, '0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f', 
+                   NULL),
                   (2, 'Uniswap V3', 'uniswap_v3', 1, '0x1f98431c8ad98523631ae4a59f267346ea31f984',
-                   '0x61ffe014ba17989e743c5f6cb21bf9697530b21e')"""  # noqa: E501
+                   '0x61ffe014ba17989e743c5f6cb21bf9697530b21e')"""
     )
     await pool.execute(
         """INSERT INTO tokens (id, chain_id, address, symbol, decimals)
@@ -78,7 +79,7 @@ async def test_get_dex(db: DB) -> None:
 async def test_find_pools_returns_only_pools_with_both_tokens(db: DB) -> None:
     pools = await db.find_pools(1, WETH, USDC)
 
-    assert [p.address[-4:] for p in pools] == ["c9dc", "5640", "0003"]  # пул 4 не попал
+    assert [p.address[-4:] for p in pools] == ["c9dc", "5640", "0003"]
     assert [p.fee for p in pools] == [None, 500, None]
 
 

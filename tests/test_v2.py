@@ -108,7 +108,7 @@ class _FakeFunctions:
     def __init__(self, result: tuple[int, int, int]) -> None:
         self._result = result
 
-    def getReserves(self) -> _FakeCall:  # noqa: N802 (имя функции контракта)
+    def getReserves(self) -> _FakeCall:
         return _FakeCall(self._result)
 
 
@@ -135,7 +135,7 @@ class _FakeW3:
 async def test_fetch_reserves_uses_checksum_address_and_drops_timestamp() -> None:
     w3 = _FakeW3((USDC_RESERVE, WETH_RESERVE, 1_700_000_000))
 
-    reserves = await fetch_reserves(w3, PAIR.lower())  # type: ignore[arg-type]
+    reserves = await fetch_reserves(w3, PAIR.lower())
 
     assert reserves == (USDC_RESERVE, WETH_RESERVE)
     assert w3.eth.contract_addresses == [AsyncWeb3.to_checksum_address(PAIR)]
