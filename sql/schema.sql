@@ -1,3 +1,4 @@
+-- Active: 1761581485264@@127.0.0.1@5432@pool_prices
 CREATE TABLE IF NOT EXISTS dexes (
     id              SERIAL PRIMARY KEY,
     name            TEXT   NOT NULL,
@@ -6,7 +7,7 @@ CREATE TABLE IF NOT EXISTS dexes (
     factory_address TEXT   NOT NULL,
     quoter_address  TEXT,
     fee             INTEGER CHECK (fee >= 0 AND fee < 1000000),
-    UNIQUE (chain_id, factory_address)
+    UNIQUE (chain_id, factory_address),
     CHECK ((protocol = 'uniswap_v2') = (fee IS NOT NULL))
 );
 

@@ -1,5 +1,6 @@
 import json
 from collections.abc import AsyncGenerator, Iterable, Sequence
+from contextlib import asynccontextmanager
 from typing import Any, Protocol
 
 import asyncpg
@@ -7,35 +8,35 @@ import asyncpg
 from pool_prices.models import Dex, Pool
 
 GET_DEX_SQL = """
-    SELECT id, name, protocol, chain_id, facktory_address, quoter_address, fee
+    SELECT id, name, protocol, chain_id, factory_address, quoter_address, fee
     FROM dexes
     WHERE id = $1
 """
 
 FIND_POOLS_SQL = """
     SELECT
-        p.address,
-        p.dex_id,
-        p.fee,
-        json_agg(
-            json_build_object(
-                'chain_id', t.chain_id,
-                'address', t.address,
-                'symbol', t.symbol,
-                'decimals', t.decimals,
-            )    
-            ORDER BY pt.position
-        ) AS tokens
+    p.address,
+    p.dex_id,
+    p.fee,
+    json_agg(
+        json_build_object(
+            'chain_id', t.chain_id,
+            'address',  t.address,
+            'symbol',   t.symbol,
+            'decimals', t.decimals
+        )
+        ORDER BY pt.position
+    ) AS tokens
     FROM pools p
     JOIN pool_tokens pt ON pt.pool_id = p.id
-    JOIN tokens t ON t.id = pt.token_id
+    JOIN tokens t       ON t.id = pt.token_id
     WHERE p.id IN (
-        SELECT pt2.pool_id
-        FROM pool_tokens pt2
-        JOIN tokens t2 ON t2.id = pt2.token_id
-        WHERE t2.chain_id = $1 AND t2.address = ANY($2::text)
-        GROUP BY pt2.pool_id
-        HAVING count(DISTRICT t2.address) = 2
+    SELECT pt2.pool_id
+    FROM pool_tokens pt2
+    JOIN tokens t2 ON t2.id = pt2.token_id
+    WHERE t2.chain_id = $1 AND t2.address = ANY($2::text[])
+    GROUP BY pt2.pool_id
+    HAVING count(DISTINCT t2.address) = 2
     )
     GROUP BY p.id
     ORDER BY p.id
@@ -81,6 +82,7 @@ class DB:
         return [pool_from_row(row) for row in rows]
 
 
+@asynccontextmanager
 async def open_db(dsn: str, *, min_size: int = 1, max_size: int = 10) -> AsyncGenerator[DB]:
 
     pool = await asyncpg.create_pool(dsn, min_size=min_size, max_size=max_size)
