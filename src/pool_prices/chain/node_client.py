@@ -7,7 +7,9 @@ from web3 import AsyncHTTPProvider, AsyncWeb3
 
 def make_web3(rpc_url: str, timeout_seconds: float = 10.0) -> AsyncWeb3[AsyncHTTPProvider]:
     provider = AsyncHTTPProvider(
-        rpc_url, request_kwargs={"timeout": ClientTimeout(total=timeout_seconds)}
+        rpc_url,
+        request_kwargs={"timeout": ClientTimeout(total=timeout_seconds)},
+        exception_retry_configuration=None,
     )
 
     return AsyncWeb3(provider)

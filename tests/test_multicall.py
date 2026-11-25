@@ -49,10 +49,13 @@ class FakeChain:
         self.seen_call_data: set[bytes] = set()
         self.delay = 0.0
         self.fail_requests = False
+        self.http_failures: list[int] = []
         self.active = 0
         self.max_active = 0
 
     async def handle(self, request: web.Request) -> web.Response:
+        if self.http_failures:
+            return web.Response(status=self.http_failures.pop(0))
         body = await request.json()
         method = body["method"]
         if method == "eth_chainId":
@@ -228,3 +231,27 @@ async def test_quote_many_with_no_matching_pools_makes_no_request(
     async with open_web3(chain.url) as w3:
         assert await v2.quote_many(w3, pools, weth, usdc, 10**18) == []
     assert chain.chunk_sizes == []
+
+
+async def test_aggregate3_retries_transient_http_errors(chain: FakeChain) -> None:
+    chain.contracts[addr(1)] = b"ok"
+    chain.http_failures = [503, 429]
+    async with open_web3(chain.url) as w3:
+        results = await aggregate3(w3, [Call(addr(1), b"\x01\x02\x03\x04")], retry_attempts=3)
+    assert results == [CallResult(True, b"ok")]
+
+
+async def test_aggregate3_gives_up_after_retry_attempts(chain: FakeChain) -> None:
+    chain.http_failures = [503, 503, 503]
+    async with open_web3(chain.url) as w3:
+        with pytest.raises(Exception, match="503"):
+            await aggregate3(w3, [Call(addr(1), b"")], retry_attempts=2)
+    assert chain.http_failures == [503]
+
+
+async def test_aggregate3_does_not_retry_client_errors(chain: FakeChain) -> None:
+    chain.http_failures = [401, 401]
+    async with open_web3(chain.url) as w3:
+        with pytest.raises(Exception, match="401"):
+            await aggregate3(w3, [Call(addr(1), b"")], retry_attempts=3)
+    assert chain.http_failures == [401]

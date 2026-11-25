@@ -5,6 +5,8 @@ from typing import Any
 
 from web3 import AsyncWeb3
 
+from pool_prices.retry import retry
+
 MULTICALL3_ADDRESS = "0xcA11bde05977b3631167028862bE2a173976CA11"
 
 DEFAULT_CHUNK_SIZE = 200
@@ -64,6 +66,7 @@ async def aggregate3(
     multicall_address: str = MULTICALL3_ADDRESS,
     chunk_size: int = DEFAULT_CHUNK_SIZE,
     max_concurrent: int = DEFAULT_MAX_CONCURRENT,
+    retry_attempts: int = 3,
 ) -> list[CallResult]:
     if chunk_size <= 0 or max_concurrent <= 0:
         raise ValueError("chunk_size and max_concurrent must be positive")
@@ -82,7 +85,9 @@ async def aggregate3(
         ]
 
         async with semaphore:
-            raw = await contract.functions.aggregate3(payload).call()
+            raw = await retry(
+                lambda: contract.functions.aggregate3(payload).call(), attempts=retry_attempts
+            )
         return [CallResult(bool(success), bytes(data)) for success, data in raw]
 
     chunks = [calls[start : start + chunk_size] for start in range(0, len(calls), chunk_size)]

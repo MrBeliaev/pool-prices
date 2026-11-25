@@ -49,11 +49,16 @@ def find_token(pools: Sequence[Pool], address: str) -> Token:
 
 class PriceService:
     def __init__(
-        self, db: PoolSource, w3: AsyncWeb3[Any], quoters: Mapping[DexProtocol, Quoter] = QUOTERS
+        self,
+        db: PoolSource,
+        w3: AsyncWeb3[Any],
+        quoters: Mapping[DexProtocol, Quoter] = QUOTERS,
+        total_timeout: float = 10.0,
     ) -> None:
         self._db = db
         self._w3 = w3
         self._quoters = quoters
+        self._total_timeout = total_timeout
 
     async def get_quotes(
         self, chain_id: int, token_in: str, token_out: str, amount_in: int
@@ -72,15 +77,19 @@ class PriceService:
 
         by_protocol = await self._group_by_protocol(pools)
         protocols = list(by_protocol)
-        outcomes = await asyncio.gather(
-            *(
-                self._quoters[protocol](
-                    self._w3, by_protocol[protocol], token_in_obj, token_out_obj, amount_in
+        try:
+            async with asyncio.timeout(self._total_timeout):
+                outcomes = await asyncio.gather(
+                    *(
+                        self._quoters[protocol](
+                            self._w3, by_protocol[protocol], token_in_obj, token_out_obj, amount_in
+                        )
+                        for protocol in protocols
+                    ),
+                    return_exceptions=True,
                 )
-                for protocol in protocols
-            ),
-            return_exceptions=True,
-        )
+        except TimeoutError as error:
+            raise QuotersFailedError(f"timed out after {self._total_timeout}s") from error
 
         quotes: list[Quote] = []
         errors: list[Exception] = []
