@@ -38,11 +38,11 @@ async def db() -> AsyncIterator[DB]:
 
 async def _seed(pool: asyncpg.Pool) -> None:
     await pool.execute(
-        """INSERT INTO dexes (id, name, protocol, chain_id, factory_address, quoter_address)
-           VALUES (1, 'Uniswap V2', 'uniswap_v2', 1, '0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f', 
-                   NULL),
+        """INSERT INTO dexes (id, name, protocol, chain_id, factory_address, quoter_address, fee)
+           VALUES (1, 'Uniswap V2', 'uniswap_v2', 1, '0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f',
+                   NULL, 3000),
                   (2, 'Uniswap V3', 'uniswap_v3', 1, '0x1f98431c8ad98523631ae4a59f267346ea31f984',
-                   '0x61ffe014ba17989e743c5f6cb21bf9697530b21e')"""
+                   '0x61ffe014ba17989e743c5f6cb21bf9697530b21e', NULL)"""
     )
     await pool.execute(
         """INSERT INTO tokens (id, chain_id, address, symbol, decimals)
@@ -54,10 +54,10 @@ async def _seed(pool: asyncpg.Pool) -> None:
 
     await pool.execute(
         """INSERT INTO pools (id, dex_id, address, fee) VALUES
-           (1, 1, '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc', NULL),
+           (1, 1, '0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc', 3000),
            (2, 2, '0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640', 500),
-           (3, 1, '0x0000000000000000000000000000000000000003', NULL),
-           (4, 1, '0x0000000000000000000000000000000000000004', NULL)"""
+           (3, 1, '0x0000000000000000000000000000000000000003', 3000),
+           (4, 1, '0x0000000000000000000000000000000000000004', 3000)"""
     )
     await pool.execute(
         """INSERT INTO pool_tokens (pool_id, token_id, position) VALUES
@@ -80,7 +80,7 @@ async def test_find_pools_returns_only_pools_with_both_tokens(db: DB) -> None:
     pools = await db.find_pools(1, WETH, USDC)
 
     assert [p.address[-4:] for p in pools] == ["c9dc", "5640", "0003"]
-    assert [p.fee for p in pools] == [None, 500, None]
+    assert [p.fee for p in pools] == [3000, 500, 3000]
 
 
 async def test_find_pools_keeps_token_order_and_supports_three_tokens(db: DB) -> None:
